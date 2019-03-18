@@ -1,7 +1,7 @@
 #! python3
 
 import serial
-import numpy as np
+#import numpy as np
 import glob
 import sys
 from serial import SerialException

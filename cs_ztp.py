@@ -110,44 +110,43 @@ def node_start(ser1,filename):
 			
 		
 
-portenv='/dev/ttyUSB0'
-portocc='/dev/ttyUSB1'
-serenv=serial.Serial(portenv, 38400)
+portocc='/dev/ttyUSB0'
+#serenv=serial.Serial(portenv, 38400)
 serocc=serial.Serial(portocc, 38400)
 time.sleep(2)
 print("initialize")
-serenv.flushInput()
+#serenv.flushInput()
 serocc.flushInput()
 return_list=[b'command 1 complete\r\n', b'command 2 complete\r\n']	#this list is to determine when to return from the while true reading loop
-datadir='/home/pi/dual_cs_data/data0220/'		#data stroage dir
+datadir='/home/pi/dual_cs_data/data0314/'		#data stroage dir
 
 if __name__=="__main__":
-	ser1=serenv
+	#ser1=serenv
 	ser2=serocc
 	while True:
 		command=input("Type in a command, 1 for initial, 2 for start, 3 for reset, 4 for close ports: ")
 		print(command)
 		if command=='1':
-			n1_initial=Thread(target=node1_initial)
+			#n1_initial=Thread(target=node1_initial)
 			n2_initial=Thread(target=node2_initial)
-			n1_initial.start()
+			#n1_initial.start()
 			n2_initial.start()
 		elif command=='2':
 			filename=input("Type in filename: ")
-			n1_start=Thread(target=node1_start, args=(filename,))
+			#n1_start=Thread(target=node1_start, args=(filename,))
 			n2_start=Thread(target=node2_start, args=(filename,))
 			
-			n1_start.start()
+			#n1_start.start()
 			n2_start.start()
 		elif command=='3':
 			print('We will reset both arduinos')
-			n1_reset=Thread(target=node1_reset)
+			#n1_reset=Thread(target=node1_reset)
 			n2_reset=Thread(target=node2_reset)
-			n1_reset.start()
+			#n1_reset.start()
 			n2_reset.start()
 		elif command=='4':
 			print('Ports will be closed, please use CTRL+C to exit the process')
-			serenv.close()
+			#serenv.close()
 			serocc.close()
 		else: 
 			print('wrong command')

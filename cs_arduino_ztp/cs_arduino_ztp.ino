@@ -6,8 +6,9 @@
 
 #include <SoftwareSerial.h>
 #include <Stepper.h>
-#include <Adafruit_MLX90614.h>
+
 #include <Wire.h>
+#include <Adafruit_ADS1015.h>
 
 
 //---( Number of steps per revolution of INTERNAL motor in 4-step mode )---
@@ -26,12 +27,12 @@ Stepper my_stepper(STEPS_PER_MOTOR_REVOLUTION, 8, 10,9, 11);
 // attach softwareserial of BT
 // SoftwareSerial BTserial(5,4); //set Bluetooth Rx=D5,Tx=D4
 
-Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+Adafruit_ADS1115 ads;
 
 int samples_per_move = 10;  //when using a new mask, the samples to collect
 int opticalpin = 2;  //use pin 2 (D2) as external interrupt
 int resetpin = 3;
-int step2take[8]={256,256,256,256,256,256,256,100};
+int step2take[8]={254,254,254,254,254,254,254,128};
 int step2take_usb0[8]={256,256,256,254,254,254,254,100};
                                                          
 int initmoves=2048; // counter that uses when going to init position
@@ -39,22 +40,33 @@ int step4init=int(STEPS_PER_OUTPUT_REVOLUTION/initmoves); //in initalization, th
 int incoming; // serial readin number, in ascii (0-127)
 volatile bool motorflag;  //motorflag=true: stepper motor is running, false: is stopped
 int myspeed=600;
-
+float multiplier = 0.0625F; // multiplier is the 1bit resolution: 1x gain = 0.125mV
+int16_t adc0, adc1, adc2, adc3;
 
 // setup
 void setup(){
   Serial.begin(38400);
+   //                                                                ADS1015  ADS1115
+  //                                                                -------  -------
+   //ads.setGain(GAIN_TWOTHIRDS);  // 2/3x gain +/- 6.144V  1 bit = 3mV      0.1875mV (default)
+   //ads.setGain(GAIN_ONE);        // 1x gain   +/- 4.096V  1 bit = 2mV      0.125mV
+   ads.setGain(GAIN_TWO);        // 2x gain   +/- 2.048V  1 bit = 1mV      0.0625mV
+  // ads.setGain(GAIN_FOUR);       // 4x gain   +/- 1.024V  1 bit = 0.5mV    0.03125mV
+  // ads.setGain(GAIN_EIGHT);      // 8x gain   +/- 0.512V  1 bit = 0.25mV   0.015625mV
+  // ads.setGain(GAIN_SIXTEEN);    // 16x gain  +/- 0.256V  1 bit = 0.125mV  0.0078125mV                                                               -------  -------
+
   //Serial.println("Connected to BT.");
-  mlx.begin();  
+  
   pinMode(opticalpin, INPUT);
   digitalWrite(resetpin, HIGH);
   delay(100);
   pinMode(resetpin, OUTPUT);
+  ads.begin();
 }
 
 //loop
 void loop(){
-  
+
   if (Serial.available()) {
     // read the incoming:
     incoming = Serial.read();
@@ -64,6 +76,7 @@ void loop(){
     if(incoming==51){  //ascii(51)=3, reset the arduino
       digitalWrite(resetpin, LOW);
     }
+//*************************************************//    
     if(incoming==49){ //ascii(49)=1
       //BTserial.println(incoming);
       //BTserial.println("enter init");
@@ -90,7 +103,7 @@ void loop(){
       Serial.println("command 1 complete");
       return;
     } //end command 1
-    
+//*********************************************//    
     if(incoming==50){ //ascii(50)=2
       //BTserial.println(incoming);
       my_stepper.setSpeed(myspeed);
@@ -112,11 +125,13 @@ void loop(){
         detachInterrupt(0);
         //my_stepper.step(-2*step4init);  //compensate off set due to inertial of the stepper motor
         delay(500);
-
+        
         //start rotating and retriving data
         for (int i=0;i<8;i++){
           for (int j=0;j<samples_per_move;j++){   
-            Serial.print(k+1); Serial.print(",");Serial.print(i+1); Serial.print(",");Serial.print(mlx.readObjectTempC()); Serial.print(",");Serial.println(mlx.readAmbientTempC());
+            adc0 = ads.readADC_SingleEnded(0);
+            adc1 = ads.readADC_SingleEnded(1);
+            Serial.print(k+1); Serial.print(",");Serial.print(i+1); Serial.print(",");Serial.print(adc0); Serial.print(",");Serial.println(adc1);
             delay(25);
           } //samples per move is 30, each will have a delay of 25ms, total 750ms+2000ms=2.75 seconds
           my_stepper.step(step2take[i]);
@@ -173,5 +188,4 @@ void findInitPos_2(){
 void StopStepper(){
   motorflag=false;
 } //ISR, when D2 has rising edge, set flag to false.
-
 
